@@ -7,10 +7,12 @@ namespace Microsoft.Samples.Kinect.ColorBasics
 {
     using System;
     using System.ComponentModel;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Globalization;
     using System.IO;
     using System.Windows;
+    using System.Windows.Controls;
     using System.Windows.Media;
     using System.Windows.Media.Imaging;
     using Microsoft.Kinect;
@@ -40,6 +42,14 @@ namespace Microsoft.Samples.Kinect.ColorBasics
         /// </summary>
         private string statusText = null;
 
+        // Bodyframe
+        private BodyFrameReader bodyFrameReader = null;
+
+        private Body[] bodies = null;
+
+        private CoordinateMapper coordinateMapper = null;
+
+        private List<Tuple<JointType, JointType>> joints;
         /// <summary>
         /// Initializes a new instance of the MainWindow class.
         /// </summary>
@@ -54,12 +64,19 @@ namespace Microsoft.Samples.Kinect.ColorBasics
             // wire handler for frame arrival
             this.colorFrameReader.FrameArrived += this.Reader_ColorFrameArrived;
 
+            //open the body reader
+            this.bodyFrameReader = this.kinectSensor.BodyFrameSource.OpenReader();
+
+            this.bodyFrameReader.FrameArrived += this.Reader_BodyFrameArrived;
+
+            this.coordinateMapper = this.kinectSensor.CoordinateMapper;
+
             // create the colorFrameDescription from the ColorFrameSource using Bgra format
             FrameDescription colorFrameDescription = this.kinectSensor.ColorFrameSource.CreateFrameDescription(ColorImageFormat.Bgra);
 
             // create the bitmap to display
             this.colorBitmap = new WriteableBitmap(colorFrameDescription.Width, colorFrameDescription.Height, 96.0, 96.0, PixelFormats.Bgr32, null);
-
+            
             // set IsAvailableChanged event notifier
             this.kinectSensor.IsAvailableChanged += this.Sensor_IsAvailableChanged;
 
@@ -75,6 +92,41 @@ namespace Microsoft.Samples.Kinect.ColorBasics
 
             // initialize the components (controls) of the window
             this.InitializeComponent();
+        }
+
+        private void Reader_BodyFrameArrived(object sender, BodyFrameArrivedEventArgs e)
+        {
+            using (BodyFrame bodyFrame = e.FrameReference.AcquireFrame())
+            {
+                if (bodyFrame != null)
+                {
+                    if (bodies == null)
+                    {
+                        bodies = new Body[bodyFrame.BodyCount];
+                    }
+                    bodyFrame.GetAndRefreshBodyData(bodies);
+                    foreach (Body body in bodies)
+                    {
+                        if (body != null)
+                        {
+                            if (body.IsTracked)
+                            {
+                                Joint handright = body.Joints[JointType.HandRight];
+                                CameraSpacePoint position = handright.Position;
+                                ColorSpacePoint colorspacepoint = this.coordinateMapper.MapCameraPointToColorSpace(position);
+                                lyk.Visibility = Visibility.Visible;
+                                Canvas.SetLeft(lyk, colorspacepoint.X * (mywindows.ActualWidth / 1920));
+                                Canvas.SetTop(lyk, colorspacepoint.Y * (mywindows.ActualHeight / 1080));
+                               
+                                T.Text = colorspacepoint.X.ToString();
+                                Ty.Text = colorspacepoint.Y.ToString();
+
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
