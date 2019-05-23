@@ -117,7 +117,6 @@ namespace Microsoft.Samples.Kinect.ColorBasics
                                 lyk.Visibility = Visibility.Visible;
                                 Canvas.SetLeft(lyk, colorspacepoint.X * (mywindows.ActualWidth / 1920));
                                 Canvas.SetTop(lyk, colorspacepoint.Y * (mywindows.ActualHeight / 1080));
-                               
                                 T.Text = colorspacepoint.X.ToString();
                                 Ty.Text = colorspacepoint.Y.ToString();
 
